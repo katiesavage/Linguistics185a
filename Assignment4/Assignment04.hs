@@ -60,4 +60,48 @@ fsa6 = ( 1
 -------------------------------------------------------------------------------
 
 slgToFSA :: SLG sy -> Automaton (ConstructedState sy) sy
-slgToFSA = undefined
+slgToFSA (s, f, t) = 
+    let ss = ExtraState in --start state
+        let ssym = getsym s ss in --start symbols transitions
+            let trn = ssym ++ tfunction t in --rest of transitions
+                let fs = undefined in
+                    (ss,fs,trn) --start state, final state, transitions
+
+getsym :: [sy] -> ConstructedState sy -> [(ConstructedState sy, sy, ConstructedState sy)]
+getsym s ss = case s of
+    [] -> []
+    (x:xs) -> (ss, x, StateForSymbol x) : getsym xs ss
+
+tfunction :: [(sy, sy)] -> [(ConstructedState sy, sy, ConstructedState sy)]
+tfunction t = case t of
+    [] -> []
+    (s1,s2):r -> (StateForSymbol s1, s2, StateForSymbol s2) : (tfunction r)
+
+-- tfunction :: [(sy, sy)] -> [(ConstructedState sy, sy, ConstructedState sy)] -> [(ConstructedState sy, sy, ConstructedState sy)]
+-- tfunction t fsat = let (st,sym,st2):rest = fsat in
+--     case t of
+--         [] -> []
+--         ((a,b):r) && (a==sym) -> (st2,sym,StateForSymbol sym): tfunction r fsat
+--         _ -> tfunction t rest
+
+-- tfunction t fsat = 
+--     let filterfsa = filter ((==sym).snd) fsat in --let (st,sym,st2):rest = fsat in
+--         case t of
+--             [] -> []
+--             (a,b):r -> case a of
+--                 a `elem` filterfsa -> (st2,sym,StateForSymbol sym): tfunction r fsat
+--             _ -> tfunction t rest
+
+-- tfunction ((a,b):r) fsat = case fsat of --((st,sym,st2):rest) = undefined 
+--     [] -> []
+--     (st,sym,st2):rest when a=sym -> (st2,sym,ConstructedState sym): tfunction r fsat
+--     _ -> tfunction r fsat
+
+-- tfunction :: [(sy, sy)] -> [(ConstructedState sy, sy, ConstructedState sy)] -> [(ConstructedState sy, sy, ConstructedState sy)]
+-- tfunction t fsat = --let fsat = (st,sym,st2):rest in
+--     case t of --t = list of tuples
+--         [] ->
+--         ((a,b):xs) -> case fsat of
+--             [] ->
+--             (st,sym,st2):rest when a=b=sym -> (st2,a,st2): tfunction xs rest
+--             (st,sym,st2):rest when a=sym -> ()
