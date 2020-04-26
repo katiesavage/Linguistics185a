@@ -63,14 +63,19 @@ slgToFSA :: SLG sy -> Automaton (ConstructedState sy) sy
 slgToFSA (s, f, t) = 
     let ss = ExtraState in --start state
         let ssym = getsym s ss in --start symbols transitions
-            let trn = ssym ++ tfunction t in --rest of transitions
-                let fs = undefined in
+            let fs = getfin f in
+                let trn = ssym ++ tfunction t in --rest of transitions
                     (ss,fs,trn) --start state, final state, transitions
 
 getsym :: [sy] -> ConstructedState sy -> [(ConstructedState sy, sy, ConstructedState sy)]
 getsym s ss = case s of
     [] -> []
     (x:xs) -> (ss, x, StateForSymbol x) : getsym xs ss
+
+getfin :: [sy] -> [ConstructedState sy] 
+getfin f = case f of
+    [] -> []
+    (x:xs) -> StateForSymbol x : getfin xs
 
 tfunction :: [(sy, sy)] -> [(ConstructedState sy, sy, ConstructedState sy)]
 tfunction t = case t of
