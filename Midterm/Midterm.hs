@@ -9,7 +9,7 @@ import Helpers
 --            Write all your code below this line.
 -------------------------------------------------------------------------------
 -------------------------------------------------------------------------------
-
+import Data.List (nub)
 -------------------------------------------------------------------------------
 -- Problem 1:
 -------------------------------------------------------------------------------
@@ -52,8 +52,11 @@ trp t s =
         x:[] -> 1
         x: xs -> case xs of
             [] -> 1
-            y: ys -> let (_,_,p) = head (filter (\(a,b,_) -> (a,b) == (x,y)) t) in
-                p * (trp t xs)
+            y: ys -> let matcht = (filter (\(a,b,_) -> (a,b) == (x,y)) t) in
+                case matcht of
+                    [] -> 0
+                    _ -> let (_,_,p) = head matcht in
+                        p * (trp t xs)
 
 valP :: Ord sy => ProbSLG sy -> [sy] -> Double
 valP (ProbSLG pslg) s = --the probability that s is a string 
@@ -73,9 +76,23 @@ valP' (ProbSLG pslg) s =
 -------------------------------------------------------------------------------
 -- Problem 2:
 -------------------------------------------------------------------------------
+-- Returns all the states mentioned anywhere in a ProbFSA.
+allStates :: Ord sy => ProbSLG sy -> [sy]
+allStates (ProbSLG (starts, ends, trans)) =
+    nub $ concat [ map (\(q, _) -> q) starts
+                 , map (\(q, _) -> q) ends
+                 , map (\(q, _, _) -> q) trans
+                 , map (\(_, q, _) -> q) trans
+                 ]
 
-buildProbSLG :: Ord a => Corpus a -> ProbSLG a
-buildProbSLG = undefined
+-- buildProbSLG :: Ord a => Corpus a -> ProbSLG a
+-- buildProbSLG [] = ProbSLG ([], [], [])
+
+-- buildProbSLG corpus = 
+--     let initP = *get starting values* in
+--         let finP = *get final values* in
+--             let trP = *get transition values* in
+--                 ProbSLG (initP, finP, trP)
 
 -- A potentially helpful starting point:
 -- buildProbSLG corpus = ProbSLG ([], [], [])
