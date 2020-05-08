@@ -9,7 +9,6 @@ import Helpers
 --            Write all your code below this line.
 -------------------------------------------------------------------------------
 -------------------------------------------------------------------------------
-import Data.List (nub)
 -------------------------------------------------------------------------------
 -- Problem 1:
 -------------------------------------------------------------------------------
@@ -76,26 +75,27 @@ valP' (ProbSLG pslg) s =
 -------------------------------------------------------------------------------
 -- Problem 2:
 -------------------------------------------------------------------------------
--- Returns all the states mentioned anywhere in a ProbFSA.
-allStates :: Ord sy => ProbSLG sy -> [sy]
-allStates (ProbSLG (starts, ends, trans)) =
-    nub $ concat [ map (\(q, _) -> q) starts
-                 , map (\(q, _) -> q) ends
-                 , map (\(q, _, _) -> q) trans
-                 , map (\(_, q, _) -> q) trans
-                 ]
+buildProbSLG :: Ord a => Corpus a -> ProbSLG a
+buildProbSLG corpus = 
+    let s = symP (concat (map (take 1) corpus)) in
+        let f = symP (map (\q -> (last q)) corpus) in
+            let tr = trP corpus in
+                ProbSLG (s, f, tr)
 
--- buildProbSLG :: Ord a => Corpus a -> ProbSLG a
--- buildProbSLG [] = ProbSLG ([], [], [])
+symP :: Ord a => [a] -> [(a, Double)]
+symP lst = 
+    let totalsy = length lst in
+        let frq = frequencies lst in
+            map (\(q,n) -> (q,(divide n totalsy))) frq
 
--- buildProbSLG corpus = 
---     let initP = *get starting values* in
---         let finP = *get final values* in
---             let trP = *get transition values* in
---                 ProbSLG (initP, finP, trP)
-
--- A potentially helpful starting point:
--- buildProbSLG corpus = ProbSLG ([], [], [])
+trP :: Ord a => Corpus a -> [(a, a, Double)]
+trP corpus = 
+    let trs = concat (map (\q -> bigrams q) corpus) in --list of bigrams/transitions within corpus
+        let frq = frequencies trs in --frequency of each transition
+            (map (\((q1,q2),n) -> (q1,q2,
+                                    (divide n (length ((filter (\(q1',q2') -> q1'==q1) trs))))))
+                                frq
+            )
 
 -------------------------------------------------------------------------------
 -- Problem 3:
