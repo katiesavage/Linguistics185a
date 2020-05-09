@@ -104,13 +104,88 @@ trP corpus =
 -- Add your sanitization functions to this list. Note that each function must
 -- operate over sentences of tagged words.
 sanitize :: [Sentence TaggedWord -> Sentence TaggedWord]
-sanitize = []
+sanitize = [filter (\q -> not (ispunctuation (getWord q))) 
+            , filter (\q -> not (ispunctuation (getTag q)))] --"words" keyword
+
+ispunctuation :: String -> Bool
+ispunctuation sym = 
+    case sym of
+        "'" -> True
+        "''" -> True
+        "(" -> True
+        ")" -> True
+        "*" -> True
+        "," -> True
+        ":" -> True
+        "``" -> True
+        _ -> False
+
 
 posProbSLG :: Corpus TaggedWord -> ProbSLG String
-posProbSLG = undefined
+posProbSLG corpus = --want to turn take the rhs values of the tagged word tuples
+    let ttot = map (getTag) in --tuple to tag
+        buildProbSLG (map (\q -> ttot q) corpus)
 
-tag :: ProbSLG String -> String -> [(Sentence TaggedWord, Double)]
-tag = undefined
+twProbSLG :: Corpus TaggedWord -> ProbSLG TaggedWord
+twProbSLG corpus = buildProbSLG corpus 
+                            -- ProbSLG ( [(TaggedWord, Double)]      -- Starting symbols.
+                            --  , [(TaggedWord, Double)]      -- Final symbols.
+                            --  , [(TaggedWord, TaggedWord, Double)]  -- Transitions.
+                            --  )
 
-tagBest :: ProbSLG String -> String -> Sentence TaggedWord
+tag :: Corpus TaggedWord -> String -> [(Sentence TaggedWord, Double)]
+tag corpus str =
+    -- String -> [String]
+    let s = words str in
+    let tr = bigrams s in 
+        let pslg = twProbSLG corpus in 
+        let ProbSLG (ss, fs, ts) = pslg in
+            let starts = filter (\(TaggedWord(q,q'),d) -> q == (head s)) ss in
+                sentence_starter pslg tr starts
+                
+sentence_starter :: ProbSLG TaggedWord -> [(String, String)] -> [(TaggedWord, Double)] -> [(Sentence TaggedWord, Double)]
+sentence_starter pslg tr starts = 
+    case starts of
+        [] -> []
+        x:xs -> sentence_maker pslg tr [(fst x)] (snd x) ++ sentence_starter pslg tr xs 
+
+sentence_maker :: ProbSLG TaggedWord -> [(String, String)] -> Sentence TaggedWord -> Double -> [(Sentence TaggedWord, Double)]
+sentence_maker pslg tr sentence prob =  --start is the w,tag of the starting word, prob is current count of probability --ending form must be (Sentence TaggedWord, double)
+    let ProbSLG (ss,fs,ts) = pslg in
+        case tr of
+            --end of sentence-> return sentence, total_prob
+            [] -> [(sentence,(prob * head(map (\(tw,d)->d)(filter (\(q,q')->q==(last sentence))fs))))]
+            --more sentence->recursively pursue different iterations of sentence from this point
+            (x,y):xs -> let nextsteps = filter (\(TaggedWord (w1,p1),TaggedWord (w2,p2),_)-> (w1,w2) == (x,y)) ts in  --filter for transitions with x bigram
+                case nextsteps of
+                    [] -> [] --maybe type?? none and just--all acceptable strings already explored (ie current transition not possible)
+                    (a,b,d):as -> (sentence_maker pslg xs (sentence++[b]) (prob*d)) ++ (sentence_maker (ProbSLG (ss,fs, (filter (\q -> q/=(a,b,d)) ts))) tr sentence prob)
+
+-- --tag attempt1
+-- tag :: Corpus TaggedWord -> String -> [(Sentence TaggedWord, Double)]
+-- tag corpus str = 
+--     -- break sentence into usable units
+--     let s = words str in
+--     --let tr = bigrams s in
+--         -- train corpus using posProbSLG -- get appropriate POS relations
+--         --let ProbSLG pslg = posProbSLG corpus in
+--         --let (ss, fs, ts) = pslg in
+--             -- possible first and last WORDS given corpus
+--             let firsts = concat (map (take 1) corpus) in
+--             --let lasts = concat (map (\q -> (last q)) corpus) in
+--                 -- get all possible firsts (WORDS, pos) matching the head of the sentence of interest
+--                 let pfirsts = filter (\(TaggedWord (q,q')) -> q == (head s)) firsts in  
+--                         sentence_starter corpus s pfirsts
+--         -- use valP given pos and sentence
+--         --valP pslg s
+
+-- sentence_starter :: Corpus TaggedWord -> [String] -> [TaggedWord] -> [(Sentence TaggedWord, Double)]
+-- sentence_starter corpus s firsts = 
+--     let pslg = posProbSLG corpus in
+--         case firsts of
+--             [] -> []
+--             x:xs -> let startp = 
+--                 sentence_maker pslg s x : sentence_starter corpus s xs
+
+tagBest :: Corpus TaggedWord -> String -> Sentence TaggedWord
 tagBest = undefined
