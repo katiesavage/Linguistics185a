@@ -147,19 +147,26 @@ sentence_starter :: ProbSLG TaggedWord -> [(String, String)] -> [(TaggedWord, Do
 sentence_starter pslg tr starts = 
     case starts of
         [] -> []
-        x:xs -> sentence_maker pslg tr [(fst x)] (snd x) ++ sentence_starter pslg tr xs 
+        x:xs -> let (TaggedWord(w,pos),d')= x in
+            sentence_maker pslg tr [(fst x)] pos (snd x) ++ sentence_starter pslg tr xs 
 
-sentence_maker :: ProbSLG TaggedWord -> [(String, String)] -> Sentence TaggedWord -> Double -> [(Sentence TaggedWord, Double)]
-sentence_maker pslg tr sentence prob =  --start is the w,tag of the starting word, prob is current count of probability --ending form must be (Sentence TaggedWord, double)
+sentence_maker :: ProbSLG TaggedWord -> [(String, String)] -> Sentence TaggedWord -> String -> Double -> [(Sentence TaggedWord, Double)]
+sentence_maker pslg tr sentence pos prob =  --start is the w,tag of the starting word, prob is current count of probability --ending form must be (Sentence TaggedWord, double)
     let ProbSLG (ss,fs,ts) = pslg in
         case tr of
             --end of sentence-> return sentence, total_prob
-            [] -> [(sentence,(prob * head(map (\(tw,d)->d)(filter (\(q,q')->q==(last sentence))fs))))]
+            [] -> let (TaggedWord (tq,tq')) = (last sentence) in
+                    let finals = filter (\(TaggedWord (q,q'),d')-> q==tq) fs in
+                        case finals of
+                            [] -> [] --not an acceptable final symbol
+                            _ -> [(sentence,(prob * head(map (\(tw,d)->d) finals)))]
             --more sentence->recursively pursue different iterations of sentence from this point
-            (x,y):xs -> let nextsteps = filter (\(TaggedWord (w1,p1),TaggedWord (w2,p2),_)-> (w1,w2) == (x,y)) ts in  --filter for transitions with x bigram
+            (x,y):xs -> let nextsteps = filter (\(TaggedWord (w1,p1),TaggedWord (w2,p2),_)-> (w1,w2,p1) == (x,y,pos)) ts in  --filter for transitions with x bigram
                 case nextsteps of
                     [] -> [] --maybe type?? none and just--all acceptable strings already explored (ie current transition not possible)
-                    (a,b,d):as -> (sentence_maker pslg xs (sentence++[b]) (prob*d)) ++ (sentence_maker (ProbSLG (ss,fs, (filter (\q -> q/=(a,b,d)) ts))) tr sentence prob)
+                    (a,b,d):as -> let TaggedWord(w,pos') = b in
+                                    (sentence_maker pslg xs (sentence++[b]) pos' (prob*d)) 
+                                    ++ (sentence_maker (ProbSLG (ss,fs, (filter (\q -> q/=(a,b,d)) ts))) tr sentence pos prob)
 
 -- --tag attempt1
 -- tag :: Corpus TaggedWord -> String -> [(Sentence TaggedWord, Double)]
@@ -188,4 +195,18 @@ sentence_maker pslg tr sentence prob =  --start is the w,tag of the starting wor
 --                 sentence_maker pslg s x : sentence_starter corpus s xs
 
 tagBest :: Corpus TaggedWord -> String -> Sentence TaggedWord
-tagBest = undefined
+tagBest corpus str = 
+    let options = tag corpus str in
+        compare_tb options (head options)
+
+compare_tb :: [(Sentence TaggedWord, Double)] -> (Sentence TaggedWord, Double) -> Sentence TaggedWord
+compare_tb options highest = 
+    case options of
+        [] -> fst highest
+        x:xs -> let (tw,d) = x in
+                let (tw',d') = highest in
+                --let new_highest = (map (\(TaggedWord(w,p),d) -> d) x) > (map (\(TaggedWord(w,p),d) -> d) highest) in
+                    let new_highest = d > d' in
+                        case new_highest of
+                            True -> compare_tb xs x
+                            False -> compare_tb xs highest
