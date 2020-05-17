@@ -54,7 +54,7 @@ concatFSAs :: (Ord sy)
             -> EpsAutomaton Int sy
             -> EpsAutomaton Int sy
 concatFSAs efsa1 efsa2 =
-        concatFSAs' efsa1 efsa22
+        concatFSAs' efsa1 efsa2
     where
         efsa1_st = allStatesEFSA efsa1
         efsa22 = ensureUnused efsa1_st efsa2 --make sure there are no repeated states between the two
@@ -76,14 +76,50 @@ concatFSAs' efsa1 efsa2 =
 starFSA :: (Ord sy)
         => EpsAutomaton Int sy
         -> EpsAutomaton Int sy
-starFSA = undefined
+starFSA efsa = 
+        starFSA' efsa2 s f
+    where
+        efsa2 =  ensureUnused [1] efsa
+        EpsAutomaton (s,f,tr) = efsa2
+
+starFSA' :: (Ord sy) => EpsAutomaton Int sy -> Int -> [Int] -> EpsAutomaton Int sy
+starFSA' efsa s1 f1 = 
+    case f of
+        [] ->
+            EpsAutomaton (1
+                        , newstart:f1
+                        , (fsttr ++ tr)
+                        )
+        x:xs -> let nefsa = (EpsAutomaton (1,xs,(x, Nothing, s):tr)) in
+            starFSA' nefsa s1 f1
+    where
+        EpsAutomaton (s,f,tr) = efsa
+        newstart = 1
+        fsttr = [(newstart, Nothing, s1)]
+
+
 
 reToFSA :: (Ord sy)
         => RegEx sy
         -> EpsAutomaton Int sy
-reToFSA (Lit a) = undefined
-reToFSA (Alt r1 r2) = undefined
-reToFSA (Concat r1 r2) = undefined
-reToFSA (Star r) = undefined
-reToFSA Zero = undefined
-reToFSA One = undefined
+reToFSA (Lit a) = EpsAutomaton (0
+                                , [1]
+                                , [(0, Just a, 1)]
+                                ) 
+reToFSA (Alt r1 r2) = 
+    let r1efsa = reToFSA r1 in
+        let r2efsa = reToFSA r2 in
+            unionFSAs r1efsa (ensureUnused (allStatesEFSA r1efsa) r2efsa)
+reToFSA (Concat r1 r2) = 
+    let r1efsa = reToFSA r1 in
+        let r2efsa = reToFSA r2 in
+            concatFSAs r1efsa (ensureUnused (allStatesEFSA r1efsa) r2efsa)
+reToFSA (Star r) = starFSA (reToFSA r)
+reToFSA Zero = EpsAutomaton (0
+                            , []
+                            , []
+                            ) 
+reToFSA One = EpsAutomaton (0
+                            , [1]
+                            , [(0, Nothing, 1)]
+                            )
