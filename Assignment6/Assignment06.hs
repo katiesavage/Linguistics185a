@@ -32,10 +32,28 @@ leaves tree =
 -------------------------------------------------------------------------------
 
 treeToRuleList :: Tree nt t -> [RewriteRule nt t]
-treeToRuleList = undefined
+treeToRuleList tree = 
+    case tree of
+        -- terminal rule
+        Leaf nt t -> [TerminalRule nt t]
+        -- nonterminal rule
+        NonLeaf nt tree1 tree2 -> (NonterminalRule nt (root tree1, root tree2)) 
+                                                    : treeToRuleList tree1 
+                                                    ++ treeToRuleList tree2
 
+--make tree, make symbol list from tree (leaves), check symbol list with terminalsOnly
 ruleListToTree :: (Eq nt, Eq t) => [RewriteRule nt t] -> Maybe (Tree nt t)
-ruleListToTree = undefined
+ruleListToTree rulelst =   
+    let (NonterminalRule nt (nt2,nt3)):rest = rulelst in   
+        Just (ruleListMaker nt rulelst)    
+
+ruleListMaker :: (Eq nt, Eq t) => nt -> [RewriteRule nt t] -> (Tree nt t)
+ruleListMaker sym rulelst = 
+    case rulelst of
+        (TerminalRule nt t):r -> if nt==sym then (Leaf nt t)
+                                    else ruleListMaker sym r
+        (NonterminalRule nt (nt2, nt3)):r -> if nt==sym then NonLeaf nt (ruleListMaker nt2 r) (ruleListMaker nt3 r)
+                                    else ruleListMaker sym r
 
 treeToDerivation :: Tree nt t -> [[Symbol nt t]]
 treeToDerivation = undefined
