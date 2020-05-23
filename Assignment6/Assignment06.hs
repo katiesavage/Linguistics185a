@@ -45,19 +45,41 @@ treeToRuleList tree =
 ruleListToTree :: (Eq nt, Eq t) => [RewriteRule nt t] -> Maybe (Tree nt t)
 ruleListToTree rulelst =   
     let (NonterminalRule nt (nt2,nt3)):rest = rulelst in   
-        Just (ruleListMaker nt rulelst)    
+        case (ruleListCheck nt rulelst) of
+            False -> Nothing
+            True -> Just (ruleListMaker nt rulelst)    
 
+ruleListCheck :: (Eq nt, Eq t) => nt -> [RewriteRule nt t] -> Bool
+ruleListCheck sym rulelst = 
+    case rulelst of
+        [] -> False
+        (TerminalRule nt t):r -> if nt==sym then True
+                                    else ruleListCheck sym r
+        (NonterminalRule nt (nt2, nt3)):r -> if nt==sym then ((ruleListCheck nt2 r) && (ruleListCheck nt3 r))
+                                    else ruleListCheck sym r
+
+--assumes correct tree
 ruleListMaker :: (Eq nt, Eq t) => nt -> [RewriteRule nt t] -> (Tree nt t)
 ruleListMaker sym rulelst = 
     case rulelst of
         (TerminalRule nt t):r -> if nt==sym then (Leaf nt t)
                                     else ruleListMaker sym r
-        (NonterminalRule nt (nt2, nt3)):r -> if nt==sym then NonLeaf nt (ruleListMaker nt2 r) (ruleListMaker nt3 r)
+        (NonterminalRule nt (nt2, nt3)):r -> if nt==sym then (NonLeaf nt (ruleListMaker nt2 r) (ruleListMaker nt3 r))
                                     else ruleListMaker sym r
 
 treeToDerivation :: Tree nt t -> [[Symbol nt t]]
-treeToDerivation = undefined
+treeToDerivation tree = 
+    let (NonLeaf nt t1 t2) = tree in
+        treeToDerivation' tree [NT nt]
 
+treeToDerivation' :: Tree nt t -> [Symbol nt t] -> [[Symbol nt t]]
+treeToDerivation' tree list = 
+    case tree of
+        -- terminal rule
+        Leaf nt t -> [[T t]]
+        -- nonterminal rule
+        NonLeaf nt tree1 tree2 ->
+            list : treeToDerivation' tree1 (tree1 :[tree2])  --[NT nt] : (treeToDerivation tree1) ++ (treeToDerivation tree2)
 -------------------------------------------------------------------------------
 -------------------------------------------------------------------------------
 
