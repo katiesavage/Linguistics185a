@@ -91,7 +91,13 @@ treeToDerivation tree =
 splitAtLeftmost :: (Eq nt, Eq t)
                 => [Symbol nt t]
                 -> Maybe ([Symbol nt t], nt, [Symbol nt t])
-splitAtLeftmost = undefined
+splitAtLeftmost [] = Nothing
+splitAtLeftmost (x:xs) =
+    case x of
+        NT y    -> Just ([], y, xs)
+        _       -> case splitAtLeftmost xs of
+                        Nothing         -> Nothing
+                        Just (ys, y, zs)   -> Just (x:ys, y, zs)
 
 rewriteLeftmost :: (Eq nt, Eq t)
                 => [RewriteRule nt t]
