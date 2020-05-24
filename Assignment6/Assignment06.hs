@@ -120,11 +120,34 @@ rewriteLeftmost rules list =
                 TerminalRule nt t -> [T t]
 
 derivableFrom :: (Eq nt, Eq t)
-              => [Symbol nt t]
-              -> [RewriteRule nt t]        
-              -> Int
+              => [Symbol nt t]              --list of symbols
+              -> [RewriteRule nt t]         --rules     
+              -> Int                        --max # steps
               -> [[t]]
-derivableFrom = undefined
+derivableFrom list rules steps = 
+    let number_nts = length (filter (ntonly) list) in
+        case number_nts of
+            0 -> [map (\(T t) -> t) list]
+            _ -> if number_nts > steps then [] 
+                    else manageRewrites list rules steps (rewriteLeftmost rules list)
+        where
+            ntonly nt_t = case nt_t of
+                NT nt -> True
+                T t -> False
+
+manageRewrites :: (Eq nt, Eq t)
+              => [Symbol nt t]              --list of symbols
+              -> [RewriteRule nt t]         --rules     
+              -> Int                        --max # steps
+              -> [[Symbol nt t]]            --rewrites
+              -> [[t]]
+manageRewrites list rules steps rewrites =
+    case rewrites of
+            [] -> []
+            x:xs -> derivableFrom x rules (steps-1)     -- use first derivation
+                    ++ manageRewrites list rules steps xs --go through rest of xs
+
+    
 
 -------------------------------------------------------------------------------
 -------------------------------------------------------------------------------
