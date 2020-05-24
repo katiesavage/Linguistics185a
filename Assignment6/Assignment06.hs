@@ -100,14 +100,28 @@ splitAtLeftmost (x:xs) =
                         Just (ys, y, zs)   -> Just (x:ys, y, zs)
 
 rewriteLeftmost :: (Eq nt, Eq t)
-                => [RewriteRule nt t]
-                -> [Symbol nt t]
+                => [RewriteRule nt t]       -- rules
+                -> [Symbol nt t]            -- list of symbols
                 -> [[Symbol nt t]]
-rewriteLeftmost = undefined
+rewriteLeftmost rules list = 
+    -- get leftmost NT
+    let lm = splitAtLeftmost list in 
+        case lm of
+            Nothing                     -> [list]   -- no NTs -> returns original list
+            Just (before, nt, after)    ->  let ntrules = filter (getrules nt) rules in
+                                                map (\y -> before ++ userules y ++ after) ntrules
+        where
+            getrules nt rule = case rule of
+                NonterminalRule nt' (nt'',nt''') -> if nt' == nt    then True      else False 
+                TerminalRule nt' t' ->              if nt' == nt    then True      else False
+
+            userules rule = case rule of
+                NonterminalRule nt (nt',nt'') -> [NT nt', NT nt'']
+                TerminalRule nt t -> [T t]
 
 derivableFrom :: (Eq nt, Eq t)
               => [Symbol nt t]
-              -> [RewriteRule nt t]
+              -> [RewriteRule nt t]        
               -> Int
               -> [[t]]
 derivableFrom = undefined
