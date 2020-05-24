@@ -67,19 +67,24 @@ ruleListMaker sym rulelst =
         (NonterminalRule nt (nt2, nt3)):r -> if nt==sym then (NonLeaf nt (ruleListMaker nt2 r) (ruleListMaker nt3 r))
                                     else ruleListMaker sym r
 
+-- (NonLeaf 1 
+    -- (NonLeaf 2 
+        --(Leaf 4 'a') 
+        --(Leaf 5 'b')) 
+    --(Leaf 3 'c'))
 treeToDerivation :: Tree nt t -> [[Symbol nt t]]
 treeToDerivation tree = 
-    let (NonLeaf nt t1 t2) = tree in
-        treeToDerivation' tree [NT nt]
-
-treeToDerivation' :: Tree nt t -> [Symbol nt t] -> [[Symbol nt t]]
-treeToDerivation' tree list = 
     case tree of
-        -- terminal rule
-        Leaf nt t -> [[T t]]
-        -- nonterminal rule
-        NonLeaf nt tree1 tree2 ->
-            list : treeToDerivation' tree1 (tree1 :[tree2])  --[NT nt] : (treeToDerivation tree1) ++ (treeToDerivation tree2)
+        -- Leaf
+        Leaf nt t -> [NT nt] : [[T t]]
+        -- NonLeaf node
+        NonLeaf nt lt rt -> 
+            let lderiv = treeToDerivation lt in
+                let rderiv = treeToDerivation rt in
+                    [[NT nt]] 
+                    ++ map (\q -> q ++ (head rderiv)) lderiv 
+                    ++ map (\q' -> (last lderiv) ++ q') (tail rderiv)
+   
 -------------------------------------------------------------------------------
 -------------------------------------------------------------------------------
 
